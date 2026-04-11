@@ -14,31 +14,60 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
-          check-latest: false
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          api-level: 30
+          ndk-version: 25.1.8937393
 
-      - name: Build and Bind
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev
+
+      - name: Build AAR
         run: |
           cd anabelrat
-          echo "Installing gomobile..."
+          
+          # Download and install gomobile
           go install golang.org/x/mobile/cmd/gomobile@latest
           go install golang.org/x/mobile/cmd/gobind@latest
           
+          # Set up environment
           export PATH=$PATH:$(go env GOPATH)/bin
+          export ANDROID_HOME=$ANDROID_SDK_ROOT
+          export NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.1.8937393
           
-          echo "Initializing gomobile..."
-          gomobile init
+          # Initialize gomobile
+          gomobile init -ndk=$NDK_HOME
           
-          echo "Running go mod tidy..."
+          # Clean and prepare
           go mod tidy
           
-          echo "Building AAR..."
+          # Build AAR
+          echo "Building AAR library..."
           gomobile bind -target=android -androidapi 30 -v -o ../anabelrat.aar .
+          
+          # Verify
+          if [ -f "../anabelrat.aar" ]; then
+            echo "✓ Build successful!"
+            ls -lh ../anabelrat.aar
+          else
+            echo "✗ Build failed!"
+            exit 1
+          fi
 
-      - name: Upload Result
+      - name: Upload Artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: anabelrat-library
+          name: anabelrat-aar
           path: anabelrat.aar
+          retention-days: 30
