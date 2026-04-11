@@ -34,10 +34,10 @@ jobs:
         run: |
           cd anabelrat
           
-          # تثبيت الأدوات بإصدار محدد مستقر
+          # تثبيت الأدوات بآخر إصدار مستقر
           echo "Installing gomobile..."
-          go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20231127170105-f0e2426c4c66
-          go install golang.org/x/mobile/cmd/gobind@v0.0.0-20231127170105-f0e2426c4c66
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          go install golang.org/x/mobile/cmd/gobind@latest
           
           # إضافة المسار للنظام
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
