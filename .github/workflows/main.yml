@@ -1,48 +1,19 @@
-name: Android Go Build
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.21' # نسخة قديمة ومستقرة جداً
-          check-latest: false # منع السيرفر من الترقية لـ 1.25
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Build and Bind
-        run: |
-          # 1. الدخول للمجلد وإصلاح الموديول
-          cd anabelrat
-          rm -f go.mod go.sum # حذف أي مخلفات قديمة
-          go mod init anabelrat
-          
-          # 2. تثبيت الأدوات بنسخ متوافقة مع Go 1.21
-          go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20231127175333-33e144a10095
-          go install golang.org/x/mobile/cmd/gobind@v0.0.0-20231127175333-33e144a10095
-          
-          # 3. تحديث المسارات
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-          export PATH=$PATH:$(go env GOPATH)/bin
-          
-          # 4. تهيئة gomobile بدون تحميل خارجي
-          gomobile init
-          
-          # 5. البناء النهائي
-          go mod tidy
-          gomobile bind -target=android -androidapi 30 -v -o ../anabelrat.aar .
-
-      - name: Upload Result
-        uses: actions/upload-artifact@v4
-        with:
-          name: anabelrat-library
-          path: anabelrat.aar
+- name: Build and Bind
+  run: |
+    cd anabelrat
+    
+    # تثبيت الأدوات بإصدار محدد مستقر
+    go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20231127170105-f0e2426c4c66
+    go install golang.org/x/mobile/cmd/gobind@v0.0.0-20231127170105-f0e2426c4c66
+    
+    # إضافة المسار للنظام
+    echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+    export PATH=$PATH:$(go env GOPATH)/bin
+    
+    # تهيئة وبناء
+    gomobile init
+    go mod init anabelrat || true
+    go mod tidy
+    
+    # البناء النهائي
+    gomobile bind -target=android -androidapi 30 -v -o ../anabelrat.aar .
