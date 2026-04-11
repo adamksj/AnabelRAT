@@ -1,45 +1,23 @@
-name: Android Go Build
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22' # رفعنا النسخة لتتوافق مع الأدوات الحديثة
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Build and Bind
+- name: Build and Bind
         run: |
-          # تثبيت الأدوات وضمان وجود مكتبة bind
+          # 1. إنشاء الموديول أولاً في جذر المشروع
+          go mod init anabelrat || true
+          
+          # 2. تثبيت الأدوات بنسخ محددة
           go install golang.org/x/mobile/cmd/gomobile@latest
           go install golang.org/x/mobile/cmd/gobind@latest
-          go get golang.org/x/mobile/bind # إضافة هذه المكتبة يدوياً لحل مشكلة الصورة
           
+          # 3. تحديث مسار النظام
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+          export PATH=$PATH:$(go env GOPATH)/bin
           
+          # 4. تحميل مكتبة bind داخل الموديول
+          go get golang.org/x/mobile/bind
+          go get golang.org/x/mobile/cmd/gobind
+          
+          # 5. تهيئة gomobile
           gomobile init
           
-          # تهيئة الموديول
-          if [ ! -f go.mod ]; then
-            go mod init anabelrat
-          fi
+          # 6. ترتيب الملفات وبناء المكتبة
           go mod tidy
-          
-          # بناء الملف
-          gomobile bind -target=android -androidapi 30 -o anabelrat.aar .
-
-      - name: Upload Result
-        uses: actions/upload-artifact@v4
-        with:
-          name: anabelrat-library
-          path: anabelrat.aar
+          gomobile bind -target=android -androidapi 30 -v -o anabelrat.aar .
