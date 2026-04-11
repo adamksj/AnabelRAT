@@ -1,0 +1,45 @@
+name: Android Go Build
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build and Bind
+        run: |
+          # تثبيت الأدوات المطلوبة
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          go install golang.org/x/mobile/cmd/gobind@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+          
+          # تهيئة البيئة
+          gomobile init
+          
+          # إنشاء ملف الموديول إذا لم يكن موجوداً
+          if [ ! -f go.mod ]; then
+            go mod init anabelrat
+          fi
+          go mod tidy
+          
+          # عملية البناء الفعلية لملف AAR
+          # لاحظ أننا نستخدم "." لأن ملف main.go في المجلد الرئيسي الآن
+          gomobile bind -target=android -androidapi 30 -o anabelrat.aar .
+
+      - name: Upload Result
+        uses: actions/upload-artifact@v4
+        with:
+          name: anabelrat-library
+          path: anabelrat.aar
