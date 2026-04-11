@@ -1,66 +1,37 @@
-name: Android Go Build
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.21'
-          check-latest: false
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Debug Info
-        run: |
-          echo "Go version:"
-          go version
-          echo "Go path:"
-          echo $GOPATH
-          echo "Path:"
-          echo $PATH
-          echo "Android SDK:"
-          ls -la $ANDROID_SDK_ROOT || echo "Android SDK not found"
-
-      - name: Build and Bind
-        run: |
-          cd anabelrat
-          
-          # تثبيت الأدوات بآخر إصدار مستقر
-          echo "Installing gomobile..."
-          go install golang.org/x/mobile/cmd/gomobile@latest
-          go install golang.org/x/mobile/cmd/gobind@latest
-          
-          # إضافة المسار للنظام
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-          export PATH=$PATH:$(go env GOPATH)/bin
-          
-          echo "Checking gomobile..."
-          which gomobile
-          gomobile version || echo "No version available"
-          
-          # تهيئة وبناء
-          echo "Initializing gomobile..."
-          gomobile init
-          echo "Initializing go mod..."
-          go mod init anabelrat || true
-          echo "Running go mod tidy..."
-          go mod tidy
-          
-          # البناء النهائي
-          echo "Building AAR..."
-          gomobile bind -target=android -androidapi 30 -v -o ../anabelrat.aar .
-
-      - name: Upload Result
-        uses: actions/upload-artifact@v4
-        with:
-          name: anabelrat-library
-          path: anabelrat.aar
+- name: Build and Bind
+  run: |
+    # التأكد من أن المجلد anabelrat موجود
+    if [ ! -d "anabelrat" ]; then
+      echo "Error: anabelrat directory not found"
+      ls -la
+      exit 1
+    fi
+    
+    cd anabelrat
+    
+    # التأكد من وجود ملفات Go
+    ls -la
+    
+    # تثبيت الأدوات
+    echo "Installing gomobile..."
+    go install golang.org/x/mobile/cmd/gomobile@latest
+    go install golang.org/x/mobile/cmd/gobind@latest
+    
+    # إضافة للـ PATH
+    export PATH=$PATH:$(go env GOPATH)/bin
+    
+    # تهيئة go.mod إذا كان غير موجود
+    if [ ! -f "go.mod" ]; then
+      echo "Creating go.mod..."
+      go mod init anabelrat
+    fi
+    
+    # تنظيف المتطلبات
+    go mod tidy
+    
+    # تهيئة gomobile
+    gomobile init
+    
+    # البناء
+    echo "Building AAR..."
+    gomobile bind -target=android -androidapi 30 -v -o ../anabelrat.aar .
