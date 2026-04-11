@@ -13,29 +13,29 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.22' # رفعنا النسخة لتتوافق مع الأدوات الحديثة
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Build and Bind
         run: |
-          # تثبيت الأدوات المطلوبة
+          # تثبيت الأدوات وضمان وجود مكتبة bind
           go install golang.org/x/mobile/cmd/gomobile@latest
           go install golang.org/x/mobile/cmd/gobind@latest
+          go get golang.org/x/mobile/bind # إضافة هذه المكتبة يدوياً لحل مشكلة الصورة
+          
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
           
-          # تهيئة البيئة
           gomobile init
           
-          # إنشاء ملف الموديول إذا لم يكن موجوداً
+          # تهيئة الموديول
           if [ ! -f go.mod ]; then
             go mod init anabelrat
           fi
           go mod tidy
           
-          # عملية البناء الفعلية لملف AAR
-          # لاحظ أننا نستخدم "." لأن ملف main.go في المجلد الرئيسي الآن
+          # بناء الملف
           gomobile bind -target=android -androidapi 30 -o anabelrat.aar .
 
       - name: Upload Result
