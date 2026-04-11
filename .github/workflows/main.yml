@@ -13,31 +13,34 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.23' # نسخة مستقرة تمنع الترقية التلقائية لـ 1.25
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Build and Bind
         run: |
-          # الدخول للمجلد الذي يحتوي على الكود
+          # 1. الدخول للمجلد
           cd anabelrat
           
-          # تهيئة الموديول داخل المجلد
+          # 2. إنشاء الموديول وتثبيت الأدوات
           go mod init anabelrat || true
-          
-          # تثبيت الأدوات
           go install golang.org/x/mobile/cmd/gomobile@latest
           go install golang.org/x/mobile/cmd/gobind@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
           
-          # تهيئة gomobile وتحميل المكتبات
-          $(go env GOPATH)/bin/gomobile init
+          # 3. تحديث المسارات لضمان رؤية الأدوات
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+          export PATH=$PATH:$(go env GOPATH)/bin
+          
+          # 4. تحميل مكتبة bind وإجبار النظام على التعرف عليها
           go get golang.org/x/mobile/bind
           go mod tidy
           
-          # البناء من داخل المجلد وإخراج الملف للخارج
-          $(go env GOPATH)/bin/gomobile bind -target=android -androidapi 30 -v -o ../anabelrat.aar .
+          # 5. تهيئة gomobile
+          gomobile init
+          
+          # 6. البناء النهائي مع توضيح المسار
+          gomobile bind -target=android -androidapi 30 -v -o ../anabelrat.aar .
 
       - name: Upload Result
         uses: actions/upload-artifact@v4
